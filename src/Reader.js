@@ -1,3 +1,5 @@
+/* eslint-disable indent, no-param-reassign, no-use-before-define */
+
 function addPropArray(node, obj, prop) {
   const property = prop.toLowerCase();
   obj[property] = obj[property] || [];
@@ -25,6 +27,7 @@ function getBool(element, tagName) {
   return false;
 }
 
+// TODO: treat different SLD versions properly, e.g. create separate parsers
 const parsers = {
   NamedLayer: (element, obj) => {
     obj.layers = obj.layers || [];
@@ -46,6 +49,7 @@ const parsers = {
   },
   FeatureTypeStyle: (element, obj) => {
     const featuretypestyle = {
+      featuretypename: getText(element, 'FeatureTypeName'),
       rules: [],
     };
     readNode(element, featuretypestyle);
@@ -93,7 +97,16 @@ const parsers = {
   PointSymbolizer: addProp,
   Fill: addProp,
   Stroke: addProp,
+  // TODO: add definitions to documentation
+  Mark: addProp,
+  WellKnownName: (element, obj) => {
+      obj.wellknownname = element.textContent.trim();
+  },
+  Graphic: addProp,
   ExternalGraphic: addProp,
+  Size: (element, obj) => {
+      obj.size = element.textContent.trim();
+  },
   OnlineResource: element => getText(element, 'sld:OnlineResource'),
   CssParameter: (element, obj) => {
     obj.css = obj.css || [];
@@ -103,6 +116,13 @@ const parsers = {
     });
   },
 };
+
+// Layers can be contained in a NamedLayer or in a UserLayer, treat both the same
+parsers.UserLayer = parsers.NamedLayer;
+
+// SvgParameter: alias for CssParameter (so also uses property name "css", so parsing later does not depend on
+// whether it was a CssParameter or a SvgParameter
+parsers.SvgParameter = parsers.CssParameter;
 
 function readNode(node, obj) {
   for (let n = node.firstElementChild; n; n = n.nextElementSibling) {

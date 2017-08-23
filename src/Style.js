@@ -1,5 +1,7 @@
 import Reader from './Reader';
 
+/* eslint-disable indent, no-param-reassign, no-use-before-define */
+
 const Filters = {
   featureid: (value, props) => {
     for (let i = 0; i < value.length; i += 1) {
@@ -111,14 +113,25 @@ class Style {
   setStyle(layername, stylename) {
     let filteredlayers;
     if (layername) {
-      filteredlayers = this.sld.layers.filter(l =>
-        (l.name.toLowerCase() === layername.toLowerCase()));
+      filteredlayers = this.sld.layers.filter((l) => {
+        let name;
+        if (l.name) name = l.name.toLowerCase();
+        // TODO: improve this!
+        // If no name on the NamedLayer/UserLayer, use FeatureTypeName, but assume there is only one... Is this OK? :-\
+        if (!name && l.styles && l.styles[0] && l.styles[0].featuretypestyles && l.styles[0].featuretypestyles[0]) {
+          name = l.styles[0].featuretypestyles[0].featuretypename.toLowerCase();
+        }
+        return (name === layername.toLowerCase());
+      });
       if (!filteredlayers.length) {
         throw Error(`layer ${layername} not found in sld`);
       }
     }
     this.layer = (filteredlayers) ? filteredlayers['0'] : this.sld.layers['0'];
+    // Get the style with the requested name (stylename), or if not given, the default style (IsDefault == true)
     this.style = this.layer.styles.filter(s => ((stylename) ? (s.name.toLowerCase() === stylename.toLowerCase()) : s.default))['0'];
+    // If no style found, use the first one:
+    if (!this.style) this.style = this.layer.styles[0];
   }
 
 

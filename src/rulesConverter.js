@@ -1,3 +1,5 @@
+/* eslint-disable indent, no-param-reassign, no-use-before-define */
+
 /**
  * @private
  * @param  {Rule[]} rules [description]
@@ -18,8 +20,24 @@ function rulesConverter(rules) {
       const stroke = rules[i].linesymbolizer.stroke;
       strokeRules(stroke, result);
     }
+    if (rules[i].pointsymbolizer && rules[i].pointsymbolizer.graphic) {
+      const graphic = rules[i].pointsymbolizer.graphic;
+      graphicRules(graphic, result);
+    }
   }
   return result;
+}
+
+function graphicRules(graphic, result) {
+    if (graphic.mark && graphic.mark.fill) {
+      fillRules(graphic.mark.fill, result);
+    }
+    if (graphic.mark && graphic.mark.stroke) {
+      strokeRules(graphic.mark.stroke, result);
+    }
+    if (graphic.size) {
+      result.size = graphic.size;
+    }
 }
 
 function strokeRules(stroke, result) {

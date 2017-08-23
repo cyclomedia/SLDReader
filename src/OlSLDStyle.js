@@ -2,9 +2,9 @@ import OlStyle from 'ol/style/style';
 import OlFill from 'ol/style/fill';
 import OlCircle from 'ol/style/circle';
 import OlStroke from 'ol/style/stroke';
+import OlColor from 'ol/color';
 import Style from './Style';
 import rulesConverter from './rulesConverter';
-
 
 /**
  * The OlSLDStyle class is the entry point for openlayers users.
@@ -27,8 +27,11 @@ class OlSLDStyle extends Style {
     props.fid = feature.getId();
     const rules = this.getRules(props, resolution);
     const style = rulesConverter(rules);
+    // Assume color is in '#rrggbb' format: convert to OL color array and add opacity
+    const fillColor = olColor.asArray(style.fillColor).slice();
+    fillColor[3] = style.fillOpacity;
     const fill = new OlFill({
-      color: style.fillColor,
+      color: fillColor,
     });
     const stroke = new OlStroke({
       color: style.strokeColor,
@@ -39,7 +42,7 @@ class OlSLDStyle extends Style {
         image: new OlCircle({
           fill,
           stroke,
-          radius: 5,
+          radius: style.size || 5,
         }),
         fill,
         stroke,
