@@ -6,6 +6,8 @@ import OlColor from 'ol/color';
 import Style from './Style';
 import rulesConverter from './rulesConverter';
 
+/* eslint-disable indent */
+
 /**
  * The OlSLDStyle class is the entry point for openlayers users.
  */
@@ -27,19 +29,38 @@ class OlSLDStyle extends Style {
     props.fid = feature.getId();
     const rules = this.getRules(props, resolution);
     const style = rulesConverter(rules);
+
+    // If the rules result in an empty style, no styles apply at all, so the feature should NOT be rendered.
+    // Return null; OL does not render features wit a "null style".
+    if (Object.keys(style).length === 0) {
+      return null;
+    }
+
     // Assume color is in '#rrggbb' format: convert to OL color array and add opacity
-    const fillColor = olColor.asArray(style.fillColor).slice();
-    fillColor[3] = style.fillOpacity;
-    const fill = new OlFill({
-      color: fillColor,
-    });
-    const stroke = new OlStroke({
-      color: style.strokeColor,
-      width: style.strokeWidth,
-    });
+    // Only create a fill style if the fillColor is defined; otherwise we would define a fill style with default OL color,
+    // instead of no fill style. Same for stroke below.
+    let fill;
+    if (style.fillColor) {
+        const fillColor = ol.color.asArray(style.fillColor).slice();
+        if (style.fillOpacity) fillColor[3] = style.fillOpacity;
+        fill = new ol.style.Fill({
+            color: fillColor,
+        });
+    }
+
+    let stroke;
+    if (style.strokeColor) {
+        const strokeColor = ol.color.asArray(style.strokeColor).slice();
+        if (style.strokeOpacity) strokeColor[3] = style.strokeOpacity;
+        stroke = new ol.style.Stroke({
+            color: strokeColor,
+            width: style.strokeWidth,
+        });
+    }
+
     const styles = [
-      new OlStyle({
-        image: new OlCircle({
+      new ol.style.Style({
+        image: new ol.style.Circle({
           fill,
           stroke,
           radius: style.size || 5,
@@ -50,12 +71,9 @@ class OlSLDStyle extends Style {
     ];
     return styles;
   }
-
 }
 
-
 export default OlSLDStyle;
-
 
  /**
   * Openlayers stylefunction

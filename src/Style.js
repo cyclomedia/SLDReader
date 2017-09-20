@@ -13,20 +13,36 @@ const Filters = {
   },
   not: (value, props) => !filterSelector(value, props),
   or: (value, props) => {
-    const keys = Object.keys(value);
-    for (let i = 0; i < keys.length; i += 1) {
-      if (value[keys[i]].length === 1 && filterSelector(value, props, i)) {
+    if (value.length === 2) {
+      if (filterSelector(value[0], props, 0) || filterSelector(value[1], props, 0)) {
         return true;
-      } else if (value[keys[i]].length !== 1) {
-        throw new Error('multiple ops of same type not implemented yet');
       }
+      return false;
     }
-    return false;
+    throw new Error('or operator should have exactly two operands');
+  },
+  and: (value, props) => {
+    if (value.length === 2) {
+        if (filterSelector(value[0], props, 0) && filterSelector(value[1], props, 0)) {
+          return true;
+        }
+        return false;
+    }
+    throw new Error('and operator should have exactly two operands');
   },
   propertyisequalto: (value, props) => (props[value['0'].propertyname] &&
     props[value['0'].propertyname] === value['0'].literal),
-  propertyislessthan: (value, props) => (props[value['0'].propertyname] &&
-    Number(props[value['0'].propertyname]) < Number(value['0'].literal)),
+  propertyisnotequalto: (value, props) => (props[value['0'].propertyname] &&
+    props[value['0'].propertyname] !== value['0'].literal),
+  propertyislessthan: (value, props) => (props[value['0'].propertyname] && Number(props[value['0'].propertyname]) < Number(value['0'].literal)),
+  propertyislessthanorequalto: (value, props) => (props[value['0'].propertyname] &&
+    Number(props[value['0'].propertyname]) <= Number(value['0'].literal)),
+  propertyisgreaterthan: (value, props) => (props[value['0'].propertyname] &&
+    Number(props[value['0'].propertyname]) > Number(value['0'].literal)),
+  propertyisgreaterthanorequalto: (value, props) => (props[value['0'].propertyname] &&
+    Number(props[value['0'].propertyname]) >= Number(value['0'].literal)),
+  propertyisbetween: (value, props) => (props[value.propertyname] && value.lowerboundary && value.upperboundary &&
+    Number(props[value.propertyname]) >= value.lowerboundary.literal && Number(props[value.propertyname]) < value.upperboundary.literal),
 };
 
 /**
@@ -121,7 +137,8 @@ class Style {
         if (!name && l.styles && l.styles[0] && l.styles[0].featuretypestyles && l.styles[0].featuretypestyles[0]) {
           name = l.styles[0].featuretypestyles[0].featuretypename.toLowerCase();
         }
-        return (name === layername.toLowerCase());
+        // Use this layer style if it has the name given. If no layer name given in the style, it should always be used
+        return (name === layername.toLowerCase() || !name);
       });
       if (!filteredlayers.length) {
         throw Error(`layer ${layername} not found in sld`);

@@ -14,6 +14,26 @@ function addProp(node, obj, prop) {
   readNode(node, obj[property]);
 }
 
+function addAndOrPropArray(element, obj, prop) {
+  if (element.children && element.children.length === 2) {
+      const property = prop.toLowerCase();
+      obj[property] = [];
+      addAndOrProp(element.children[0], obj, property);
+      addAndOrProp(element.children[1], obj, property);
+  } else {
+      throw new Error(prop + ' operator should have exactly two operands');
+  }
+}
+
+function addAndOrProp(element, obj, prop) {
+    const property = prop.toLowerCase();
+    const operand = {};
+    const name = element.localName.toLowerCase();
+    operand[name] = [];
+    addPropArray(element, operand, name);
+    obj[property].push(operand);
+}
+
 function getText(element, tagName) {
   const collection = element.getElementsByTagName(tagName);
   return (collection.length) ? collection.item(0).textContent : '';
@@ -67,21 +87,23 @@ const parsers = {
   ElseFilter: (element, obj) => {
     obj.elsefilter = true;
   },
-  Or: addProp,
-  And: addProp,
-  Not: addProp,
+  Or: addAndOrPropArray,
+  And: addAndOrPropArray,
   PropertyIsEqualTo: addPropArray,
   PropertyIsNotEqualTo: addPropArray,
   PropertyIsLessThan: addPropArray,
   PropertyIsLessThanOrEqualTo: addPropArray,
   PropertyIsGreaterThan: addPropArray,
   PropertyIsGreaterThanOrEqualTo: addPropArray,
+  PropertyIsBetween: addProp,
   PropertyName: (element, obj) => {
     obj.propertyname = element.textContent;
   },
   Literal: (element, obj) => {
     obj.literal = element.textContent;
   },
+  LowerBoundary: addProp,
+  UpperBoundary: addProp,
   FeatureId: (element, obj) => {
     obj.featureid = obj.featureid || [];
     obj.featureid.push(element.getAttribute('fid'));
