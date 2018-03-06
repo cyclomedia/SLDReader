@@ -30,20 +30,48 @@ const Filters = {
     }
     throw new Error('and operator should have exactly two operands');
   },
-  propertyisequalto: (value, props) => (props[value['0'].propertyname] &&
-    props[value['0'].propertyname] === value['0'].literal),
-  propertyisnotequalto: (value, props) => (props[value['0'].propertyname] &&
-    props[value['0'].propertyname] !== value['0'].literal),
-  propertyislessthan: (value, props) => (props[value['0'].propertyname] && Number(props[value['0'].propertyname]) < Number(value['0'].literal)),
-  propertyislessthanorequalto: (value, props) => (props[value['0'].propertyname] &&
-    Number(props[value['0'].propertyname]) <= Number(value['0'].literal)),
-  propertyisgreaterthan: (value, props) => (props[value['0'].propertyname] &&
-    Number(props[value['0'].propertyname]) > Number(value['0'].literal)),
-  propertyisgreaterthanorequalto: (value, props) => (props[value['0'].propertyname] &&
-    Number(props[value['0'].propertyname]) >= Number(value['0'].literal)),
+  propertyisequalto: compareProperty,
+  propertyisnotequalto: compareProperty,
+  propertyislessthan: compareProperty,
+  propertyislessthanorequalto: compareProperty,
+  propertyisgreaterthan: compareProperty,
+  propertyisgreaterthanorequalto: compareProperty,
   propertyisbetween: (value, props) => (props[value.propertyname] && value.lowerboundary && value.upperboundary &&
-    Number(props[value.propertyname]) >= value.lowerboundary.literal && Number(props[value.propertyname]) < value.upperboundary.literal),
+    compare(props[value.propertyname], value.lowerboundary.literal, 'propertyisgreaterthanorequalto') &&
+    compare(props[value.propertyname], value.upperboundary.literal, 'propertyislessthanorequalto')),
 };
+
+function compareProperty(value, props, operator) {
+    if (!value['0'].propertyname) {
+        return false;
+    }
+    const a = props[value['0'].propertyname];
+    const b = value['0'].literal;
+    return compare(a, b, operator);
+}
+
+function compare(a, b, operator) {
+  if (!Number.isNaN(Number(a)) && !Number.isNaN(Number(b))) {
+    a = Number(a);
+    b = Number(b);
+  }
+  switch (operator) {
+  case 'propertyisequalto':
+    return a === b;
+  case 'propertyisnotequalto':
+    return a !== b;
+  case 'propertyislessthan':
+    return a < b;
+  case 'propertyislessthanorequalto':
+    return a <= b;
+  case 'propertyisgreaterthan':
+    return a > b;
+  case 'propertyisgreaterthanorequalto':
+    return a >= b;
+  default:
+    throw new Error(`unknown comparison operator "${operator}"`);
+  }
+}
 
 /**
  * [filterSelector description]
@@ -56,7 +84,7 @@ const Filters = {
 function filterSelector(filter, properties, key = 0) {
   const type = Object.keys(filter)[key];
   if (Filters[type]) {
-    if (Filters[type](filter[type], properties)) {
+    if (Filters[type](filter[type], properties, type)) {
       return true;
     }
   } else {
@@ -95,7 +123,6 @@ function scaleSelector(rule, resolution) {
  * After creating an instance you should call the read method.
  */
 class Style {
-
   constructor() {
     this.getRules = this.getRules.bind(this);
   }
@@ -152,34 +179,47 @@ class Style {
   }
 
 
-  /**
-   * get sld rules for feature
-   * @param  {Object} properties feature properties
-   * @param {number} resolution unit/px
-   * @return {Rule} filtered sld rules
-   */
-  getRules(properties, resolution) {
-    if (!this.style) {
-      throw new Error('Set a style to use');
-    }
-    const result = [];
-    const FeatureTypeStyleLength = this.style.featuretypestyles.length;
-    for (let i = 0; i < FeatureTypeStyleLength; i += 1) {
-      const fttypestyle = this.style.featuretypestyles[i];
-      for (let j = 0; j < fttypestyle.rules.length; j += 1) {
-        const rule = fttypestyle.rules[j];
-        if (rule.filter && scaleSelector(rule, resolution) &&
-          filterSelector(rule.filter, properties)) {
-          result.push(rule);
-        } else if (rule.elsefilter && result.length === 0) {
-          result.push(rule);
-        } else if (!rule.elsefilter && !rule.filter) {
-          result.push(rule);
+    /**
+     * get sld rules for feature
+     * @param  {Object} properties feature properties
+     * @param {number} resolution unit/px
+     * @return {Rule} filtered sld rules
+     */
+    getRules(properties, resolution) {
+        if (!this.style) {
+            throw new Error('Set a style to use');
         }
-      }
+        const result = [];
+        const FeatureTypeStyleLength = this.style.featuretypestyles.length;
+        for (let i = 0; i < FeatureTypeStyleLength; i += 1) {
+            const fttypestyle = this.style.featuretypestyles[i];
+            for (let j = 0; j < fttypestyle.rules.length; j += 1) {
+                const rule = fttypestyle.rules[j];
+                if (rule.filter && scaleSelector(rule, resolution) &&
+                    filterSelector(rule.filter, properties)) {
+                    result.push(rule);
+                } else if (rule.elsefilter && result.length === 0) {
+                    result.push(rule);
+                } else if (!rule.elsefilter && !rule.filter) {
+                    result.push(rule);
+                }
+            }
+        }
+        return result;
     }
-    return result;
-  }
+
+
+    /**
+     * get user style for feature
+     * @return {Style}
+     */
+    getFeatureStyle() {
+        if (!this.style) {
+            throw new Error('Set a style to use');
+        }
+        const result = this.style;
+        return result;
+    }
 }
 
 
